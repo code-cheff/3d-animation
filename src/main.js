@@ -24,6 +24,42 @@ function disposePreviousTextures() {
   activeTextures = [];
 }
 
+function resetGallery() {
+  controls.galleryGrid.innerHTML = "";
+  controls.gallery.hidden = true;
+}
+
+function imageToDownloadUrl(image) {
+  const canvas = image.tagName === "CANVAS" ? image : (() => {
+    const c = document.createElement("canvas");
+    c.width = image.naturalWidth || image.width;
+    c.height = image.naturalHeight || image.height;
+    c.getContext("2d").drawImage(image, 0, 0);
+    return c;
+  })();
+  return canvas.toDataURL("image/jpeg", 0.92);
+}
+
+function addToGallery(index, image) {
+  const url = imageToDownloadUrl(image);
+  const item = document.createElement("div");
+  item.className = "gallery-item";
+
+  const thumb = document.createElement("img");
+  thumb.src = url;
+  thumb.alt = `Shot ${index + 1}`;
+
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `dream-shot-${index + 1}.jpg`;
+  link.textContent = `Shot ${index + 1} ⬇`;
+
+  item.appendChild(thumb);
+  item.appendChild(link);
+  controls.galleryGrid.appendChild(item);
+  controls.gallery.hidden = false;
+}
+
 function buildTextureFromImage(image) {
   const texture = new THREE.Texture(image);
   // Deliberately NOT setting colorSpace = SRGBColorSpace here: our shader is a
@@ -77,6 +113,7 @@ async function handleGenerate() {
   isBusy = true;
   controls.generateBtn.disabled = true;
   disposePreviousTextures();
+  resetGallery();
 
   try {
     const shots = buildStoryboard(promptText);
@@ -102,6 +139,8 @@ async function handleGenerate() {
           seed: i,
         });
       }
+
+      addToGallery(i, image);
 
       const colorTexture = buildTextureFromImage(image);
       const depthTexture = computeHeuristicDepth(image, { verticalBiasWeight: shot.verticalBiasWeight });

@@ -3,6 +3,8 @@ export function getControls() {
     promptInput: document.getElementById("prompt-input"),
     generateBtn: document.getElementById("generate-btn"),
     canvas: document.getElementById("scene-canvas"),
+    gallery: document.getElementById("gallery"),
+    galleryGrid: document.getElementById("gallery-grid"),
   };
 }
 

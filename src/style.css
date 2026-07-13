@@ -115,6 +115,61 @@ button:disabled {
   margin: 0;
 }
 
+#gallery {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#gallery[hidden] {
+  display: none;
+}
+
+#gallery-hint {
+  color: rgba(255,255,255,0.6);
+  font-size: 11px;
+  margin: 0;
+  text-align: center;
+}
+
+#gallery-hint a {
+  color: #c9a8ff;
+}
+
+#gallery-grid {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.gallery-item {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.gallery-item img {
+  width: 64px;
+  height: 114px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.2);
+  display: block;
+}
+
+.gallery-item a {
+  font-size: 10px;
+  color: #fff;
+  text-decoration: none;
+  background: rgba(255,255,255,0.15);
+  padding: 2px 6px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
 #toast {
   pointer-events: none;
   position: absolute;
