@@ -43,31 +43,20 @@ export default async function handler(req, res) {
 
     const [row] = await insertResp.json();
 
-    let telegramDebug = { attempted: false };
     if (telegramToken && telegramChatId) {
-      telegramDebug.attempted = true;
-      try {
-        const tgResp = await fetch(`https://api.telegram.org/bot${telegramToken.trim()}/sendMessage`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            chat_id: telegramChatId.trim(),
-            text: `New animation request!\n\nPrompt: "${row.prompt}"\nRequest ID: ${row.id}`,
-          }),
-        });
-        const tgJson = await tgResp.json();
-        telegramDebug.ok = tgJson.ok === true;
-        telegramDebug.responseFromTelegram = tgJson;
-      } catch (tgErr) {
-        telegramDebug.ok = false;
-        telegramDebug.error = String(tgErr);
-      }
-    } else {
-      telegramDebug.tokenPresent = !!telegramToken;
-      telegramDebug.chatIdPresent = !!telegramChatId;
+      // Fire-and-forget - a notification failure shouldn't fail the friend's request.
+      // .trim() guards against stray whitespace/newlines from copy-pasting env vars.
+      fetch(`https://api.telegram.org/bot${telegramToken.trim()}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: telegramChatId.trim(),
+          text: `New animation request!\n\nPrompt: "${row.prompt}"\nRequest ID: ${row.id}`,
+        }),
+      }).catch(() => {});
     }
 
-    res.status(200).json({ id: row.id, telegramDebug });
+    res.status(200).json({ id: row.id });
   } catch (err) {
     res.status(502).json({ error: String(err) });
   }
