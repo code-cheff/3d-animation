@@ -26,7 +26,11 @@ function disposePreviousTextures() {
 
 function buildTextureFromImage(image) {
   const texture = new THREE.Texture(image);
-  texture.colorSpace = THREE.SRGBColorSpace;
+  // Deliberately NOT setting colorSpace = SRGBColorSpace here: our shader is a
+  // raw passthrough (no lighting math), and setting it triggers an automatic
+  // sRGB->linear hardware decode on every texture2D sample that our shader
+  // doesn't compensate for, silently darkening the image by roughly 6x
+  // (confirmed by comparing rendered vs. source average brightness).
   texture.minFilter = THREE.LinearFilter;
   texture.magFilter = THREE.LinearFilter;
   texture.generateMipmaps = false;

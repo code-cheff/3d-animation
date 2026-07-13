@@ -5,7 +5,12 @@ const HEIGHT = 854;
 const ASPECT = WIDTH / HEIGHT;
 
 export function createSceneManager(canvas) {
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+  // preserveDrawingBuffer is required for canvas.captureStream() to reliably read
+  // WebGL frames: without it, the browser can clear the backbuffer immediately
+  // after presenting, and captureStream samples on its own timer independent of
+  // our render calls - so it can (and did, in testing) sample a cleared buffer,
+  // producing an all-black recording.
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, preserveDrawingBuffer: true });
   renderer.setPixelRatio(1); // fixed regardless of devicePixelRatio - predictable perf/encode cost on unknown phones
   renderer.setSize(WIDTH, HEIGHT, false);
   renderer.outputColorSpace = THREE.SRGBColorSpace;

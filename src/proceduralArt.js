@@ -3,22 +3,25 @@
 // Draws an abstract, color-themed scene from simple keyword matching so the
 // parallax pipeline always has something with real edges/variation to work
 // with, rather than the whole video failing when one external service is down.
+// Kept deliberately bright/saturated (no near-black gradient stops) - an
+// earlier version faded to pure black and averaged ~10% brightness, which read
+// as "basically a black video" to a real viewer.
 const COLOR_WORDS = {
-  red: ["#ff4d4d", "#7a1010"],
-  blue: ["#4d79ff", "#0a1a4d"],
-  green: ["#4dff88", "#0a4d1a"],
-  purple: ["#9d4dff", "#2a0a4d"],
-  pink: ["#ff4da6", "#4d0a2a"],
-  yellow: ["#ffe14d", "#4d3d0a"],
-  orange: ["#ff9d4d", "#4d240a"],
-  gold: ["#ffd700", "#4d3d00"],
-  night: ["#2a2a55", "#05050f"],
-  rain: ["#5588aa", "#0a1520"],
-  fire: ["#ff6a1a", "#4d1000"],
-  ocean: ["#1a8fff", "#001a33"],
-  gray: ["#999999", "#2a2a2a"],
+  red: ["#ff6b6b", "#8a2a2a"],
+  blue: ["#5a8dff", "#1a3a7a"],
+  green: ["#5dff9e", "#1a6b3a"],
+  purple: ["#b06bff", "#4a1a7a"],
+  pink: ["#ff6bc4", "#7a1a52"],
+  yellow: ["#ffe45d", "#7a5a0a"],
+  orange: ["#ffab5d", "#7a3f0a"],
+  gold: ["#ffdf4d", "#7a5f0a"],
+  night: ["#5a5aa0", "#20204a"],
+  rain: ["#7aa8cc", "#1a3a52"],
+  fire: ["#ff8a4d", "#7a2a0a"],
+  ocean: ["#4dabff", "#0a3a5f"],
+  gray: ["#b0b0b0", "#4a4a4a"],
 };
-const DEFAULT_PALETTE = ["#7c3aed", "#1a1030"];
+const DEFAULT_PALETTE = ["#a06bff", "#3a1a6a"];
 
 function pickPalette(text) {
   const lower = text.toLowerCase();
@@ -47,21 +50,23 @@ export function generateProceduralImage(prompt, { width = 480, height = 854, see
   const rand = mulberry32(seed + 1);
   const [accent, base] = pickPalette(prompt);
 
+  // Background never fades to black - stays within a mid-tone band so the
+  // whole frame reads as visible content, not empty space.
   const bgGradient = ctx.createLinearGradient(0, 0, 0, height);
-  bgGradient.addColorStop(0, base);
-  bgGradient.addColorStop(1, "#000000");
+  bgGradient.addColorStop(0, accent);
+  bgGradient.addColorStop(1, base);
   ctx.fillStyle = bgGradient;
   ctx.fillRect(0, 0, width, height);
 
-  const blobCount = 5 + Math.floor(rand() * 4);
+  const blobCount = 8 + Math.floor(rand() * 5);
   for (let i = 0; i < blobCount; i++) {
     const x = rand() * width;
-    const y = height * (0.3 + rand() * 0.7); // bias toward lower half, like a ground plane
-    const r = width * (0.15 + rand() * 0.35);
+    const y = height * (0.2 + rand() * 0.8);
+    const r = width * (0.25 + rand() * 0.45);
     const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
     grad.addColorStop(0, accent);
     grad.addColorStop(1, "rgba(0,0,0,0)");
-    ctx.globalAlpha = 0.35 + rand() * 0.35;
+    ctx.globalAlpha = 0.55 + rand() * 0.35;
     ctx.fillStyle = grad;
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
