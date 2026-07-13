@@ -2,6 +2,7 @@
 // video directly to Supabase Storage, to flip the request to "ready" with
 // its public video URL so the friend's polling request-status.js picks it up.
 export default async function handler(req, res) {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
   if (req.method !== "POST") {
     res.status(405).json({ error: "Method not allowed" });
     return;

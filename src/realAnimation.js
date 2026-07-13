@@ -21,7 +21,9 @@ export function pollRequestStatus(id, { onReady }) {
   async function tick() {
     if (stopped) return;
     try {
-      const resp = await fetch(`/api/request-status?id=${encodeURIComponent(id)}`);
+      const resp = await fetch(`/api/request-status?id=${encodeURIComponent(id)}&_=${Date.now()}`, {
+        cache: "no-store",
+      });
       if (resp.ok) {
         const data = await resp.json();
         if (data.status === "ready" && data.video_url) {

@@ -1,6 +1,10 @@
 // Public endpoint: the friend's webapp polls this to find out when her
 // manually-fulfilled animation is ready.
 export default async function handler(req, res) {
+  // Same request-status URL is polled repeatedly - must never be cached, or
+  // the friend's webapp would keep seeing a stale "pending" forever.
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+
   const { id } = req.query;
   if (!id) {
     res.status(400).json({ error: "Missing id" });

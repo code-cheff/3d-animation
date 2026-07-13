@@ -3,6 +3,7 @@
 // Vercel's ~4.5MB serverless function body limit) without ever exposing the
 // Supabase service key to the browser.
 export default async function handler(req, res) {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
   if (req.method !== "POST") {
     res.status(405).json({ error: "Method not allowed" });
     return;

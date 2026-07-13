@@ -20,7 +20,9 @@ function showAdmin() {
 
 async function loadRequests() {
   const secret = getSecret();
-  const resp = await fetch(`/api/admin-list?secret=${encodeURIComponent(secret)}`);
+  const resp = await fetch(`/api/admin-list?secret=${encodeURIComponent(secret)}&_=${Date.now()}`, {
+    cache: "no-store",
+  });
   if (resp.status === 401) {
     sessionStorage.removeItem(SECRET_KEY);
     passwordGate.hidden = false;
@@ -120,7 +122,9 @@ async function handleUpload(id, fileInput, uploadBtn, statusMsg) {
 loginBtn.addEventListener("click", async () => {
   const value = passwordInput.value.trim();
   if (!value) return;
-  const resp = await fetch(`/api/admin-list?secret=${encodeURIComponent(value)}`);
+  const resp = await fetch(`/api/admin-list?secret=${encodeURIComponent(value)}&_=${Date.now()}`, {
+    cache: "no-store",
+  });
   if (resp.status === 401) {
     passwordInput.value = "";
     passwordInput.placeholder = "Wrong secret, try again";
