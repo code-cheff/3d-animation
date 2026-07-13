@@ -1,6 +1,10 @@
 import * as THREE from "three";
 
-const MAX_OFFSET = 0.04; // UV units; kept small so the clamp-to-edge smear stays subtle
+// Stronger than the original tuning: the first pass (0.04 offset, no zoom) was
+// confirmed too subtle to read as motion at all - frame-to-frame difference
+// within a shot measured under 3/255, looking like a slideshow of stills.
+const MAX_OFFSET = 0.1; // UV units of depth-weighted parallax pan
+const ZOOM_AMOUNT = 0.18; // Ken Burns push-in, independent of depth map quality so motion is always visible
 
 function easeInOut(t) {
   return (1 - Math.cos(Math.PI * t)) / 2;
@@ -18,10 +22,12 @@ const FRAGMENT_SHADER = `
 uniform sampler2D colorTex;
 uniform sampler2D depthTex;
 uniform vec2 uOffset;
+uniform float uZoom;
 varying vec2 vUv;
 void main() {
-  float depth = texture2D(depthTex, vUv).r;
-  vec2 shiftedUv = clamp(vUv + uOffset * depth, 0.0, 1.0);
+  vec2 zoomedUv = (vUv - 0.5) / uZoom + 0.5;
+  float depth = texture2D(depthTex, clamp(zoomedUv, 0.0, 1.0)).r;
+  vec2 shiftedUv = clamp(zoomedUv + uOffset * depth, 0.0, 1.0);
   gl_FragColor = texture2D(colorTex, shiftedUv);
 }
 `;
@@ -35,6 +41,7 @@ export function createParallaxShot(scene, aspect) {
       colorTex: { value: null },
       depthTex: { value: null },
       uOffset: { value: new THREE.Vector2(0, 0) },
+      uZoom: { value: 1 },
     },
   });
   const mesh = new THREE.Mesh(geometry, material);
@@ -52,6 +59,7 @@ export function createParallaxShot(scene, aspect) {
       const eased = easeInOut(Math.min(Math.max(tShotNormalized, 0), 1));
       const shift = panDir * MAX_OFFSET * eased;
       material.uniforms.uOffset.value.set(shift, shift * 0.25);
+      material.uniforms.uZoom.value = 1 + ZOOM_AMOUNT * eased;
     },
     dispose() {
       geometry.dispose();

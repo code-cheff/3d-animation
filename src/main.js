@@ -117,7 +117,8 @@ async function handleGenerate() {
 
     const blob = await recorderHandle.stop();
     sceneManager.setRecording(false);
-    downloadBlob(blob, `dream-reel-${Date.now()}.webm`);
+    const extension = blob.type.includes("mp4") ? "mp4" : "webm";
+    downloadBlob(blob, `dream-reel-${Date.now()}.${extension}`);
     showToast("Saved! \u{1F389}");
   } catch (err) {
     console.error(err);

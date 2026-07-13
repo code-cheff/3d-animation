@@ -4,7 +4,16 @@
 // workaround the previous version used).
 
 function pickMimeType() {
-  const candidates = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"];
+  // Prefer mp4 (H.264) when the device offers a hardware encoder for it - most
+  // Android devices and video players/apps handle mp4 more universally than
+  // webm. Falls back to webm (Chromium's default) when mp4 isn't available.
+  const candidates = [
+    "video/mp4;codecs=h264",
+    "video/mp4",
+    "video/webm;codecs=vp9",
+    "video/webm;codecs=vp8",
+    "video/webm",
+  ];
   for (const type of candidates) {
     if (window.MediaRecorder && MediaRecorder.isTypeSupported(type)) return type;
   }
