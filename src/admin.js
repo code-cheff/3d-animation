@@ -20,17 +20,25 @@ function showAdmin() {
 
 async function loadRequests() {
   const secret = getSecret();
-  const resp = await fetch(`/api/admin-list?secret=${encodeURIComponent(secret)}&_=${Date.now()}`, {
-    cache: "no-store",
-  });
-  if (resp.status === 401) {
-    sessionStorage.removeItem(SECRET_KEY);
-    passwordGate.hidden = false;
-    adminContent.hidden = true;
-    return;
+  const debugEl = document.getElementById("debug-info");
+  try {
+    const url = `/api/admin-list?secret=${encodeURIComponent(secret)}&_=${Date.now()}`;
+    const resp = await fetch(url, { cache: "no-store" });
+    const text = await resp.text();
+    if (debugEl) {
+      debugEl.textContent = `URL: ${url}\nStatus: ${resp.status}\nBody: ${text.slice(0, 300)}`;
+    }
+    if (resp.status === 401) {
+      sessionStorage.removeItem(SECRET_KEY);
+      passwordGate.hidden = false;
+      adminContent.hidden = true;
+      return;
+    }
+    const rows = JSON.parse(text);
+    renderRequests(rows);
+  } catch (err) {
+    if (debugEl) debugEl.textContent = `Fetch threw an error: ${err}`;
   }
-  const rows = await resp.json();
-  renderRequests(rows);
 }
 
 function renderRequests(rows) {

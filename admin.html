@@ -81,6 +81,16 @@
       text-align: center;
       margin-top: 40px;
     }
+    #debug-info {
+      white-space: pre-wrap;
+      word-break: break-all;
+      font-size: 10px;
+      color: rgba(255,255,255,0.4);
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+      padding: 8px;
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
@@ -95,6 +105,7 @@
       <button id="refresh-btn">Refresh</button>
       <div id="requests-list" style="margin-top: 16px;"></div>
       <p id="empty-msg" hidden>No pending requests.</p>
+      <pre id="debug-info"></pre>
     </div>
   </div>
   <script type="module" src="/src/admin.js"></script>
