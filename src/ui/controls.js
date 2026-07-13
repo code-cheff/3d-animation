@@ -5,11 +5,14 @@ export function getControls() {
     canvas: document.getElementById("scene-canvas"),
     gallery: document.getElementById("gallery"),
     galleryGrid: document.getElementById("gallery-grid"),
+    requestRealBtn: document.getElementById("request-real-btn"),
+    requestStatus: document.getElementById("request-status"),
   };
 }
 
-export function wireControls(controls, { onGenerate }) {
+export function wireControls(controls, { onGenerate, onRequestReal }) {
   controls.generateBtn.addEventListener("click", onGenerate);
+  controls.requestRealBtn.addEventListener("click", onRequestReal);
 
   controls.promptInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) {

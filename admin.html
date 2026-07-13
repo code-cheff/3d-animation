@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dream Machine — Admin</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #06060c;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100dvh;
+    }
+    #admin-app {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 20px 16px;
+    }
+    h2 {
+      margin: 0 0 16px;
+    }
+    #password-gate {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: 300px;
+      margin: 60px auto;
+      text-align: center;
+    }
+    input, button {
+      font-size: 15px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.08);
+      color: #fff;
+    }
+    button {
+      cursor: pointer;
+      background: linear-gradient(135deg, #7c3aed, #ec4899);
+      border: none;
+      font-weight: 600;
+    }
+    #admin-content[hidden], #password-gate[hidden] {
+      display: none;
+    }
+    .request-card {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .request-card p {
+      margin: 0 0 4px;
+    }
+    .request-card .meta {
+      color: rgba(255,255,255,0.5);
+      font-size: 11px;
+      margin-bottom: 10px;
+    }
+    .request-card .row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    input[type="file"] {
+      flex: 1;
+      padding: 6px;
+      font-size: 12px;
+    }
+    .status-msg {
+      font-size: 12px;
+      margin-top: 8px;
+      color: rgba(255,255,255,0.7);
+    }
+    #empty-msg {
+      color: rgba(255,255,255,0.5);
+      text-align: center;
+      margin-top: 40px;
+    }
+  </style>
+</head>
+<body>
+  <div id="admin-app">
+    <div id="password-gate">
+      <h2>Admin Login</h2>
+      <input id="password-input" type="password" placeholder="Admin secret" />
+      <button id="login-btn">Enter</button>
+    </div>
+    <div id="admin-content" hidden>
+      <h2>Pending Requests</h2>
+      <button id="refresh-btn">Refresh</button>
+      <div id="requests-list" style="margin-top: 16px;"></div>
+      <p id="empty-msg" hidden>No pending requests.</p>
+    </div>
+  </div>
+  <script type="module" src="/src/admin.js"></script>
+</body>
+</html>

@@ -115,6 +115,44 @@ button:disabled {
   margin: 0;
 }
 
+#request-real-btn {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.25);
+}
+
+#request-hint {
+  color: rgba(255,255,255,0.45);
+  font-size: 11px;
+  text-align: center;
+  margin: 0;
+}
+
+#request-status {
+  background: rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 10px;
+  font-size: 12px;
+  text-align: center;
+  color: rgba(255,255,255,0.8);
+}
+
+#request-status[hidden] {
+  display: none;
+}
+
+#request-status video {
+  width: 100%;
+  border-radius: 8px;
+  margin-top: 8px;
+  display: block;
+}
+
+#request-status a {
+  color: #c9a8ff;
+  display: inline-block;
+  margin-top: 6px;
+}
+
 #gallery {
   display: flex;
   flex-direction: column;

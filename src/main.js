@@ -7,6 +7,7 @@ import { computeHeuristicDepth } from "./depthHeuristic.js";
 import { generateHuggingFaceImage, generatePollinationsImage } from "./imageGen.js";
 import { generateProceduralImage } from "./proceduralArt.js";
 import { startRecording, downloadBlob, isRecordingSupported } from "./recorder.js";
+import { submitRealAnimationRequest, pollRequestStatus } from "./realAnimation.js";
 import { getControls, wireControls } from "./ui/controls.js";
 import { showToast } from "./ui/statusToast.js";
 
@@ -122,12 +123,16 @@ async function handleGenerate() {
     for (let i = 0; i < shots.length; i++) {
       showToast(`Preparing shot ${i + 1}/${shots.length}...`, { sticky: true });
       const shot = shots[i];
-      let image = await generateHuggingFaceImage(shot.prompt, {
+      // Pollinations first: genuinely free with no per-account cap when it's up.
+      // Hugging Face is a quality bonus, but free HF accounts only get $0.10/month
+      // in Inference Provider credits (~10 images) before every call fails - so
+      // leading with it would burn the whole month's free allowance on one video.
+      let image = await generatePollinationsImage(shot.prompt, {
         width: sceneManager.width,
         height: sceneManager.height,
       });
       if (!image) {
-        image = await generatePollinationsImage(shot.prompt, {
+        image = await generateHuggingFaceImage(shot.prompt, {
           width: sceneManager.width,
           height: sceneManager.height,
         });
@@ -169,7 +174,56 @@ async function handleGenerate() {
   }
 }
 
-wireControls(controls, { onGenerate: handleGenerate });
+let stopPolling = null;
+
+function renderReadyVideo(videoUrl) {
+  controls.requestStatus.innerHTML = "";
+
+  const msg = document.createElement("p");
+  msg.textContent = "Your real animation is ready! \u{1F389}";
+
+  const video = document.createElement("video");
+  video.src = videoUrl;
+  video.controls = true;
+  video.playsInline = true;
+
+  const link = document.createElement("a");
+  link.href = videoUrl;
+  link.download = "real-animation.mp4";
+  link.textContent = "Download video";
+
+  controls.requestStatus.appendChild(msg);
+  controls.requestStatus.appendChild(video);
+  controls.requestStatus.appendChild(link);
+  controls.requestRealBtn.disabled = false;
+}
+
+async function handleRequestReal() {
+  const promptText = controls.promptInput.value.trim();
+  if (!promptText) {
+    showToast("Type something first!");
+    return;
+  }
+
+  controls.requestRealBtn.disabled = true;
+  controls.requestStatus.hidden = false;
+  controls.requestStatus.textContent = "Sending your request...";
+
+  try {
+    const id = await submitRealAnimationRequest(promptText);
+    controls.requestStatus.textContent =
+      "Request sent! Your real animation is being made - this can take a while. Keep this page open (or check back later) and it'll appear here once it's ready.";
+
+    if (stopPolling) stopPolling();
+    stopPolling = pollRequestStatus(id, { onReady: renderReadyVideo });
+  } catch (err) {
+    console.error(err);
+    controls.requestStatus.textContent = "Couldn't send request, try again.";
+    controls.requestRealBtn.disabled = false;
+  }
+}
+
+wireControls(controls, { onGenerate: handleGenerate, onRequestReal: handleRequestReal });
 
 if (!isRecordingSupported(controls.canvas)) {
   controls.generateBtn.disabled = true;
