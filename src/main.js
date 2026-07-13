@@ -1,46 +1,117 @@
+import * as THREE from "three";
 import { createSceneManager } from "./scene/sceneManager.js";
-import { pickPreset } from "./promptMatcher.js";
-import { loadImageFromFile } from "./scene/imageTexture.js";
+import { createParallaxShot } from "./scene/parallaxShot.js";
+import { scheduleShot } from "./scene/shotScheduler.js";
+import { buildStoryboard } from "./shotPlanner.js";
+import { computeHeuristicDepth } from "./depthHeuristic.js";
 import { generatePollinationsImage } from "./imageGen.js";
-import { recordGif, downloadBlob } from "./recorder.js";
+import { generateProceduralImage } from "./proceduralArt.js";
+import { startRecording, downloadBlob, isRecordingSupported } from "./recorder.js";
 import { getControls, wireControls } from "./ui/controls.js";
 import { showToast } from "./ui/statusToast.js";
 
+const SHOT_DURATION_MS = 5000;
+
 const controls = getControls();
 const sceneManager = createSceneManager(controls.canvas);
+const parallaxShot = createParallaxShot(sceneManager.scene, sceneManager.aspect);
 
-let uploadedFile = null;
 let isBusy = false;
+let activeTextures = [];
 
-function applyPrompt(promptText, image) {
-  const { preset, palette, speed } = pickPreset(promptText, { hasImage: !!image });
-  sceneManager.loadPreset(preset, { palette, speed, image });
-  controls.saveBtn.disabled = false;
-  showToast(`${preset.name} ✨`);
+function disposePreviousTextures() {
+  for (const tex of activeTextures) tex.dispose();
+  activeTextures = [];
+}
+
+function buildTextureFromImage(image) {
+  const texture = new THREE.Texture(image);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = false;
+  texture.wrapS = THREE.ClampToEdgeWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  texture.needsUpdate = true;
+  return texture;
+}
+
+function playShotsWhileRecording(assets) {
+  return new Promise((resolve) => {
+    const startTime = performance.now();
+    let currentShotIndex = -1;
+    sceneManager.setOnTick(() => {
+      // Use real wall-clock time, not accumulated per-frame dt: a throttled or
+      // backgrounded rAF (phone screen lock, or this test harness's always-hidden
+      // tab) fires ticks rarely, and dt-accumulation with a per-tick clamp would
+      // make the recording take far longer than the real 30s it should.
+      const elapsedMs = performance.now() - startTime;
+      const { shotIndex, tShotNormalized, done } = scheduleShot(elapsedMs, SHOT_DURATION_MS, assets.length);
+      if (done) {
+        sceneManager.setOnTick(null);
+        resolve();
+        return;
+      }
+      if (shotIndex !== currentShotIndex) {
+        const asset = assets[shotIndex];
+        parallaxShot.setActiveShot(asset.colorTexture, asset.depthTexture, asset.panDir);
+        currentShotIndex = shotIndex;
+      }
+      parallaxShot.updateOffset(tShotNormalized);
+    });
+  });
 }
 
 async function handleGenerate() {
   if (isBusy) return;
   const promptText = controls.promptInput.value.trim();
-  if (!promptText && !uploadedFile) {
-    showToast("Type something or add a photo first!");
+  if (!promptText) {
+    showToast("Type something first!");
     return;
   }
 
   isBusy = true;
   controls.generateBtn.disabled = true;
+  disposePreviousTextures();
 
   try {
-    let image = null;
-    if (uploadedFile) {
-      image = await loadImageFromFile(uploadedFile);
-    } else if (promptText) {
-      showToast("Dreaming up an image...", { sticky: true });
-      image = await generatePollinationsImage(promptText);
+    const shots = buildStoryboard(promptText);
+    const assets = [];
+
+    for (let i = 0; i < shots.length; i++) {
+      showToast(`Preparing shot ${i + 1}/${shots.length}...`, { sticky: true });
+      const shot = shots[i];
+      let image = await generatePollinationsImage(shot.prompt, {
+        width: sceneManager.width,
+        height: sceneManager.height,
+      });
+      if (!image) {
+        image = generateProceduralImage(shot.prompt, {
+          width: sceneManager.width,
+          height: sceneManager.height,
+          seed: i,
+        });
+      }
+
+      const colorTexture = buildTextureFromImage(image);
+      const depthTexture = computeHeuristicDepth(image, { verticalBiasWeight: shot.verticalBiasWeight });
+      activeTextures.push(colorTexture, depthTexture);
+      assets.push({ colorTexture, depthTexture, panDir: shot.panDir });
     }
-    applyPrompt(promptText, image);
+
+    showToast("Recording your video...", { sticky: true });
+    sceneManager.setRecording(true);
+    const recorderHandle = startRecording(controls.canvas, { fps: 24 });
+
+    await playShotsWhileRecording(assets);
+
+    const blob = await recorderHandle.stop();
+    sceneManager.setRecording(false);
+    downloadBlob(blob, `dream-reel-${Date.now()}.webm`);
+    showToast("Saved! \u{1F389}");
   } catch (err) {
     console.error(err);
+    sceneManager.setRecording(false);
     showToast("Something went wrong, try again");
   } finally {
     isBusy = false;
@@ -48,39 +119,9 @@ async function handleGenerate() {
   }
 }
 
-function handleImageChange(file) {
-  uploadedFile = file;
-  controls.imageNameEl.textContent = file ? file.name : "";
+wireControls(controls, { onGenerate: handleGenerate });
+
+if (!isRecordingSupported(controls.canvas)) {
+  controls.generateBtn.disabled = true;
+  showToast("Video recording isn't supported in this browser — try Chrome on Android.", { sticky: true });
 }
-
-async function handleSave() {
-  if (isBusy) return;
-  isBusy = true;
-  controls.saveBtn.disabled = true;
-  showToast("Recording...", { sticky: true });
-
-  try {
-    const blob = await recordGif(controls.canvas, {
-      onProgress: (p) => {
-        if (p < 1) showToast(`Recording... ${Math.round(p * 100)}%`, { sticky: true });
-        else showToast("Encoding... (a few seconds)", { sticky: true });
-      },
-    });
-    downloadBlob(blob, `dream-machine-${Date.now()}.gif`);
-    showToast("Saved! \u{1F389}");
-  } catch (err) {
-    console.error(err);
-    showToast("Couldn't save — try your phone's screen recorder instead");
-  } finally {
-    isBusy = false;
-    controls.saveBtn.disabled = false;
-  }
-}
-
-wireControls(controls, {
-  onGenerate: handleGenerate,
-  onImageChange: handleImageChange,
-  onSave: handleSave,
-});
-
-applyPrompt("galaxy", null);

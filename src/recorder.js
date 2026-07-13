@@ -1,53 +1,45 @@
-// gif.js (loaded globally via <script> in index.html) needs its worker script
-// same-origin to be able to `new Worker(url)` it. Since we load gif.js itself
-// from a CDN with no build step, fetch the worker source once and turn it
-// into a same-origin Blob URL instead of pointing at the CDN URL directly.
-const WORKER_SCRIPT_URL = "https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js";
-let cachedWorkerBlobUrl = null;
+// Native MediaRecorder + canvas.captureStream(), reliably supported on Android
+// Chrome (unlike iOS Safari, which has confirmed captureStream/MediaRecorder
+// bugs - this app targets Android only, so we no longer need the GIF-based
+// workaround the previous version used).
 
-async function getWorkerBlobUrl() {
-  if (cachedWorkerBlobUrl) return cachedWorkerBlobUrl;
-  const res = await fetch(WORKER_SCRIPT_URL);
-  if (!res.ok) throw new Error(`Failed to fetch gif worker script: ${res.status}`);
-  const text = await res.text();
-  const blob = new Blob([text], { type: "application/javascript" });
-  cachedWorkerBlobUrl = URL.createObjectURL(blob);
-  return cachedWorkerBlobUrl;
+function pickMimeType() {
+  const candidates = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"];
+  for (const type of candidates) {
+    if (window.MediaRecorder && MediaRecorder.isTypeSupported(type)) return type;
+  }
+  return null;
 }
 
-export async function recordGif(canvas, { durationMs = 3500, fps = 12, width = 480, height = 480, onProgress } = {}) {
-  const workerScript = await getWorkerBlobUrl();
+export function isRecordingSupported(canvas) {
+  return !!(window.MediaRecorder && canvas.captureStream);
+}
 
-  const gif = new window.GIF({
-    workers: 2,
-    quality: 10,
-    workerScript,
-    width,
-    height,
+export function startRecording(canvas, { fps = 24, videoBitsPerSecond = 2_500_000 } = {}) {
+  const mimeType = pickMimeType();
+  if (!mimeType) throw new Error("MediaRecorder with WebM is not supported on this browser");
+
+  const stream = canvas.captureStream(fps);
+  const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond });
+  const chunks = [];
+
+  recorder.ondataavailable = (e) => {
+    if (e.data && e.data.size > 0) chunks.push(e.data);
+  };
+
+  const stopped = new Promise((resolve, reject) => {
+    recorder.onstop = () => resolve(new Blob(chunks, { type: mimeType }));
+    recorder.onerror = (e) => reject(e.error || new Error("MediaRecorder error"));
   });
 
-  const frameDelay = Math.round(1000 / fps);
-  const totalFrames = Math.round(durationMs / frameDelay);
+  recorder.start(1000); // 1s timeslice - bounds peak memory instead of buffering the whole clip unmuxed
 
-  return new Promise((resolve, reject) => {
-    let frame = 0;
-
-    gif.on("finished", (blob) => resolve(blob));
-    gif.on("abort", () => reject(new Error("GIF recording aborted")));
-
-    function captureFrame() {
-      if (frame >= totalFrames) {
-        gif.render();
-        return;
-      }
-      gif.addFrame(canvas, { copy: true, delay: frameDelay });
-      frame++;
-      if (onProgress) onProgress(frame / totalFrames);
-      setTimeout(captureFrame, frameDelay);
-    }
-
-    captureFrame();
-  });
+  return {
+    stop() {
+      recorder.stop();
+      return stopped;
+    },
+  };
 }
 
 export function downloadBlob(blob, filename) {

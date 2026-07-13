@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Dream Machine — 3D Scene Generator</title>
+  <title>Dream Machine — Auto Storyboard Reel</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>%E2%9C%A8</text></svg>" />
   <link rel="stylesheet" href="/src/style.css" />
   <script type="importmap">
@@ -13,11 +13,12 @@
       }
     }
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js"></script>
 </head>
 <body>
   <div id="app">
-    <canvas id="scene-canvas"></canvas>
+    <div id="canvas-frame">
+      <canvas id="scene-canvas"></canvas>
+    </div>
 
     <div id="overlay">
       <h1 id="title">✨ Dream Machine</h1>
@@ -27,21 +28,12 @@
           id="prompt-input"
           rows="2"
           maxlength="120"
-          placeholder="Type something... e.g. 'fire dance' or 'blue galaxy'"
+          placeholder="Describe a scene... e.g. 'rainy night street market with lanterns'"
         ></textarea>
 
-        <div id="row">
-          <label id="upload-label" for="image-input">🖼️ Add photo</label>
-          <input id="image-input" type="file" accept="image/*" hidden />
-          <span id="image-name"></span>
-        </div>
+        <button id="generate-btn" type="button">Create My 30s Video ✨</button>
 
-        <div id="row">
-          <button id="generate-btn" type="button">Generate ✨</button>
-          <button id="save-btn" type="button" disabled>Save GIF 💾</button>
-        </div>
-
-        <p id="hint">Tip: if Save doesn't work well, your phone's screen recorder always works!</p>
+        <p id="hint">Takes 1-2 minutes: 6 shots are generated and animated automatically, then the video downloads.</p>
       </div>
 
       <div id="toast" hidden></div>
