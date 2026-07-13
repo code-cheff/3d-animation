@@ -45,16 +45,24 @@ export default async function handler(req, res) {
     const [row] = await insertResp.json();
 
     if (telegramToken && telegramChatId) {
-      // Fire-and-forget - a notification failure shouldn't fail the friend's request.
+      // Must be awaited, not fire-and-forget: Vercel can freeze/terminate the
+      // function's execution the instant a response is sent, killing any
+      // still-in-flight unawaited request - which is exactly why this was
+      // unreliable before. A failure here still shouldn't fail the main
+      // request, so errors are caught and swallowed after awaiting.
       // .trim() guards against stray whitespace/newlines from copy-pasting env vars.
-      fetch(`https://api.telegram.org/bot${telegramToken.trim()}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: telegramChatId.trim(),
-          text: `New animation request!\n\nPrompt: "${row.prompt}"\nRequest ID: ${row.id}`,
-        }),
-      }).catch(() => {});
+      try {
+        await fetch(`https://api.telegram.org/bot${telegramToken.trim()}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: telegramChatId.trim(),
+            text: `New animation request!\n\nPrompt: "${row.prompt}"\nRequest ID: ${row.id}`,
+          }),
+        });
+      } catch {
+        // Notification failure shouldn't fail the friend's request.
+      }
     }
 
     res.status(200).json({ id: row.id });
