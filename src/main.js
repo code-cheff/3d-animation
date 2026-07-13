@@ -4,7 +4,7 @@ import { createParallaxShot } from "./scene/parallaxShot.js";
 import { scheduleShot } from "./scene/shotScheduler.js";
 import { buildStoryboard } from "./shotPlanner.js";
 import { computeHeuristicDepth } from "./depthHeuristic.js";
-import { generatePollinationsImage } from "./imageGen.js";
+import { generateHuggingFaceImage, generatePollinationsImage } from "./imageGen.js";
 import { generateProceduralImage } from "./proceduralArt.js";
 import { startRecording, downloadBlob, isRecordingSupported } from "./recorder.js";
 import { getControls, wireControls } from "./ui/controls.js";
@@ -85,10 +85,16 @@ async function handleGenerate() {
     for (let i = 0; i < shots.length; i++) {
       showToast(`Preparing shot ${i + 1}/${shots.length}...`, { sticky: true });
       const shot = shots[i];
-      let image = await generatePollinationsImage(shot.prompt, {
+      let image = await generateHuggingFaceImage(shot.prompt, {
         width: sceneManager.width,
         height: sceneManager.height,
       });
+      if (!image) {
+        image = await generatePollinationsImage(shot.prompt, {
+          width: sceneManager.width,
+          height: sceneManager.height,
+        });
+      }
       if (!image) {
         image = generateProceduralImage(shot.prompt, {
           width: sceneManager.width,

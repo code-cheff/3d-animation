@@ -1,10 +1,11 @@
-// Free, keyless image generation via Pollinations.ai. No SLA guaranteed, so
-// every attempt races a timeout, and one retry is attempted before giving up -
-// mirroring the retry behavior already validated in the ai_3d_video Python
-// prototype, where individual fetches occasionally took 25-40s.
-function fetchOnce(prompt, { timeoutMs, width, height }) {
+// Three image sources, tried in order by main.js: (1) our own Vercel serverless
+// proxy in front of Hugging Face's FLUX.1-schnell (paid-tier reliability, needs
+// HF_TOKEN configured server-side), (2) Pollinations.ai (free, keyless, but no
+// uptime SLA - it went down entirely for a stretch this project), (3) a local
+// procedural-art fallback with no network dependency at all.
+
+function loadImageFromUrl(url, timeoutMs) {
   return new Promise((resolve) => {
-    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&nologo=true`;
     const img = new Image();
     img.crossOrigin = "anonymous"; // must be set before .src so the load is CORS-clean for canvas reads
 
@@ -32,12 +33,25 @@ function fetchOnce(prompt, { timeoutMs, width, height }) {
   });
 }
 
+export async function generateHuggingFaceImage(
+  prompt,
+  { timeoutMs = 20000, width = 480, height = 854, retries = 1 } = {}
+) {
+  const url = `/api/generate-image?prompt=${encodeURIComponent(prompt)}&width=${width}&height=${height}`;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const img = await loadImageFromUrl(url, timeoutMs);
+    if (img) return img;
+  }
+  return null;
+}
+
 export async function generatePollinationsImage(
   prompt,
   { timeoutMs = 25000, width = 480, height = 854, retries = 1 } = {}
 ) {
+  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&nologo=true`;
   for (let attempt = 0; attempt <= retries; attempt++) {
-    const img = await fetchOnce(prompt, { timeoutMs, width, height });
+    const img = await loadImageFromUrl(url, timeoutMs);
     if (img) return img;
   }
   return null;
